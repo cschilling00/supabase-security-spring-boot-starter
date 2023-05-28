@@ -27,7 +27,7 @@
         <label>Password:
             <input name="password" type="password"/>
         </label>
-        <button hx-post="/api/user/login">Submit</button>
+        <button hx-post="/api/user/login" hx-target="body">Submit</button>
     </form>
 
     <h2>
@@ -40,7 +40,7 @@
         <label>Password:
             <input name="password" type="password"/>
         </label>
-        <button hx-post="/api/user/register">Submit</button>
+        <button hx-post="/api/user/register" hx-target="body">Submit</button>
     </form>
 
 </div>
@@ -48,12 +48,12 @@
 
 <a href="https://eyxbhhammxxopyqgwvej.supabase.co/auth/v1/authorize?provider=google">Sign In with Google</a>
 
-</body>
 <div sec:authorize="!hasRole('ROLE_ANONYMOUS')">
     <h2>
-        <button hx-get="/api/user/logout">Logout</button>
+        <button hx-get="/api/user/logout" hx-target="body">Logout</button>
     </h2>
 </div>
+</body>
 <script>
     if (window.location.hash.startsWith("#access_token")) {
         htmx.ajax('POST', '/api/user/jwt', {target: '#body', swap: 'outerHTML'})

@@ -6,10 +6,9 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.put
-import io.supabase.gotrue.GoTrueClient
-import io.supabase.gotrue.types.GoTrueTokenResponse
 import de.tschuehly.supabasesecurityspringbootstarter.application.TestApplication
-import de.tschuehly.supabasesecurityspringbootstarter.types.SupabaseUser
+import io.github.jan.supabase.gotrue.GoTrue
+import io.github.jan.supabase.plugins.standaloneSupabaseModule
 import org.assertj.core.api.BDDAssertions.then
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -20,6 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.*
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
@@ -31,13 +31,17 @@ import org.springframework.util.StringUtils
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = ["debug=org.springframework.security"],
 )
-class SupabaseIntegrationTest() {
+@TestPropertySource(
+    properties = ["SUPABASE_PROJECT_ID=", "SUPABASE_ANON_KEY=", "SUPABASE_DATABASE_PW=", "SUPABASE_JWT_SECRET="]
+)
+class SupabaseIntegrationTest {
 
     @Autowired
-    lateinit var supabaseGoTrueClient: GoTrueClient<SupabaseUser, GoTrueTokenResponse>
-
     @LocalServerPort
     var port: Int? = null
+
+    @Autowired
+    lateinit var goTrueClient: GoTrue
 
     private var wireMockServer: WireMockServer = WireMockServer(9999)
 
@@ -46,10 +50,10 @@ class SupabaseIntegrationTest() {
     @BeforeEach
     fun proxyToWireMock() {
         wireMockServer.start()
-        supabaseGoTrueClient = GoTrueClient.customApacheJacksonGoTrueClient(
-            url = "http://localhost:${wireMockServer.port()}",
-            headers = emptyMap()
+        goTrueClient = standaloneSupabaseModule(
+            GoTrue, url = "http://localhost:${wireMockServer.port()}", apiKey = ""
         )
+
     }
 
     @AfterEach
@@ -62,11 +66,8 @@ class SupabaseIntegrationTest() {
     @Test
     fun `User should be able to register with Email`() {
         wireMockServer.stubFor(
-            post("/signup")
-                .willReturn(
-                    WireMock.aResponse()
-                        .withStatus(200)
-                        .withBody(fixture("/fixtures/signup-response.json"))
+            post("/signup").willReturn(
+                    WireMock.aResponse().withStatus(200).withBody(fixture("/fixtures/signup-response.json"))
                 )
         )
         val registerEntity: ResponseEntity<String> = restTemplate.postForEntity(
@@ -81,10 +82,8 @@ class SupabaseIntegrationTest() {
             "http://localhost:$port/account", HttpMethod.GET, HttpEntity(null, null), String::class.java
         )
 
-        then(accountResponse.statusCode)
-            .isEqualTo(HttpStatus.FOUND)
-        then(accountResponse.headers.get("Location")!![0])
-            .endsWith("/unauthenticated")
+        then(accountResponse.statusCode).isEqualTo(HttpStatus.FOUND)
+        then(accountResponse.headers.get("Location")!![0]).endsWith("/unauthenticated")
     }
 
     @Test
@@ -101,56 +100,41 @@ class SupabaseIntegrationTest() {
             "http://localhost:$port/admin", HttpMethod.GET, HttpEntity(null, null), String::class.java
         )
 
-        then(adminResponse.statusCode)
-            .isEqualTo(HttpStatus.FOUND)
-        then(adminResponse.headers.get("Location")!![0])
-            .endsWith("/unauthenticated")
+        then(adminResponse.statusCode).isEqualTo(HttpStatus.FOUND)
+        then(adminResponse.headers.get("Location")!![0]).endsWith("/unauthenticated")
     }
 
     @Test
     fun `Authenticated User cannot set Roles for Users`() {
         wireMockServer.stubFor( //TODO: Is it even useful to test it this way?
-            put("/admin/users/54a12619-cee3-4856-a854-bad14d4639ed")
-                .willReturn(
-                    WireMock.aResponse()
-                        .withStatus(403)
+            put("/admin/users/54a12619-cee3-4856-a854-bad14d4639ed").willReturn(
+                    WireMock.aResponse().withStatus(403)
                 )
         )
         val userResponse: ResponseEntity<String> = restTemplate.exchange(
-            "http://localhost:$port/api/user/setRoles",
-            HttpMethod.PUT,
-            getFormDataEntity(
+            "http://localhost:$port/api/user/setRoles", HttpMethod.PUT, getFormDataEntity(
                 formdata = arrayOf("userId" to "54a12619-cee3-4856-a854-bad14d4639ed", "roles" to "user"),
                 jwt = fixture("/fixtures/valid-user-jwt.txt")
-            ),
-            String::class.java
+            ), String::class.java
         )
 
-        then(userResponse.statusCode)
-            .isEqualTo(HttpStatus.FOUND)
-        then(userResponse.headers.get("Location")!![0])
-            .endsWith("/unauthenticated")
+        then(userResponse.statusCode).isEqualTo(HttpStatus.FOUND)
+        then(userResponse.headers.get("Location")!![0]).endsWith("/unauthenticated")
 
     }
 
     @Test
     fun `Service Role User can set Roles for Users`() {
         wireMockServer.stubFor(
-            put("/admin/users/54a12619-cee3-4856-a854-bad14d4639ed")
-                .willReturn(
-                    WireMock.aResponse()
-                        .withStatus(200)
-                        .withBody(fixture("/fixtures/signup-response.json"))
+            put("/admin/users/54a12619-cee3-4856-a854-bad14d4639ed").willReturn(
+                    WireMock.aResponse().withStatus(200).withBody(fixture("/fixtures/signup-response.json"))
                 )
         )
         val userResponse: ResponseEntity<String> = restTemplate.exchange(
-            "http://localhost:$port/api/user/setRoles",
-            HttpMethod.PUT,
-            getFormDataEntity(
+            "http://localhost:$port/api/user/setRoles", HttpMethod.PUT, getFormDataEntity(
                 formdata = arrayOf("userId" to "54a12619-cee3-4856-a854-bad14d4639ed", "roles" to "user"),
                 jwt = createJWT()
-            ),
-            String::class.java
+            ), String::class.java
         )
         then(userResponse.statusCode).isEqualTo(HttpStatus.OK)
 
@@ -159,21 +143,14 @@ class SupabaseIntegrationTest() {
     @Test
     fun `User can login and access the account page`() {
         wireMockServer.stubFor(
-            post("/token?grant_type=password")
-                .willReturn(
-                    WireMock.aResponse()
-                        .withStatus(200)
-                        .withBody(fixture("/fixtures/login-response.json"))
+            post("/token?grant_type=password").willReturn(
+                    WireMock.aResponse().withStatus(200).withBody(fixture("/fixtures/login-response.json"))
                 )
         )
         val loginResponse: ResponseEntity<String> = restTemplate.exchange(
-            "http://localhost:$port/api/user/login",
-            HttpMethod.POST,
-            getFormDataEntity(
-                formdata = arrayOf("email" to "first.last@example.com", "password" to "test1234"),
-                jwt = null
-            ),
-            String::class.java
+            "http://localhost:$port/api/user/login", HttpMethod.POST, getFormDataEntity(
+                formdata = arrayOf("email" to "first.last@example.com", "password" to "test1234"), jwt = null
+            ), String::class.java
         )
         then(loginResponse.statusCode).isEqualTo(HttpStatus.OK)
         then(loginResponse.headers["Set-Cookie"]!![0]).isNotNull
@@ -199,25 +176,22 @@ class SupabaseIntegrationTest() {
             String::class.java
         )
 
-        then(accountResponse.statusCode)
-            .isEqualTo(HttpStatus.FOUND)
-        then(accountResponse.headers.get("Location")!![0])
-            .endsWith("/unauthenticated")
+        then(accountResponse.statusCode).isEqualTo(HttpStatus.FOUND)
+        then(accountResponse.headers.get("Location")!![0]).endsWith("/unauthenticated")
     }
 
     private fun getFormDataEntity(
-        vararg formdata: Pair<String, String>,
-        jwt: String?
+        vararg formdata: Pair<String, String>, jwt: String?
     ): HttpEntity<MultiValueMap<String, String>> {
         val headers = jwt?.let {
             getHeaderForJwt(jwt)
         } ?: HttpHeaders()
-        headers.contentType = MediaType.APPLICATION_FORM_URLENCODED;
-        val map = LinkedMultiValueMap<String, String>();
+        headers.contentType = MediaType.APPLICATION_FORM_URLENCODED
+        val map = LinkedMultiValueMap<String, String>()
         formdata.forEach {
             map.add(it.first, it.second)
         }
-        return HttpEntity(map, headers);
+        return HttpEntity(map, headers)
     }
 
     private fun fixture(path: String): String {
@@ -234,14 +208,12 @@ class SupabaseIntegrationTest() {
 
 
 fun createJWT(): String {
-    return JWT.create()
-        .withPayload(
+    return JWT.create().withPayload(
             mapOf(
                 "aud" to "authenticated",
                 "sub" to "f802c3bb-223e-43a6-bba0-5ae6094f0d91",
                 "email" to "first.last@example.com",
-                "app_metadata" to
-                        """{
+                "app_metadata" to """{
                   "provider": "email",
                   "providers": [
                     "email"

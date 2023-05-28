@@ -1,6 +1,7 @@
 package de.tschuehly.supabasesecurityspringbootstarter.controller
 
-import de.tschuehly.supabasesecurityspringbootstarter.exception.SuccessfulRegistrationConfirmationEmailSentException
+import de.tschuehly.supabasesecurityspringbootstarter.exception.MissingCredentialsException
+import de.tschuehly.supabasesecurityspringbootstarter.exception.SuccessfulRegistrationConfirmationEmailSent
 import de.tschuehly.supabasesecurityspringbootstarter.service.SupabaseUserService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -10,11 +11,12 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
+import java.security.InvalidParameterException
 
 @Controller
 @RequestMapping("api/user")
 class SupabaseUserController(
-    val supabaseUserService: SupabaseUserService,
+        val supabaseUserService: SupabaseUserService,
 ) {
     val logger: Logger = LoggerFactory.getLogger(SupabaseUserController::class.java)
 
@@ -27,10 +29,9 @@ class SupabaseUserController(
         val email = credentials["email"]
         val password = credentials["password"]
         if (email != null && password != null) {
-            logger.debug("User with the email $email is trying to register")
-            val user = supabaseUserService.registerWithEmail(email.trim(), password.trim(), response)
-            logger.debug("User with the mail ${user.email} successfully registered, Confirmation Mail sent")
-            throw SuccessfulRegistrationConfirmationEmailSentException("User with the mail ${user.email} successfully registered, Confirmation Mail sent")
+            supabaseUserService.registerWithEmail(email.trim(), password.trim(), response)
+        }else{
+            throw MissingCredentialsException("User tried to register without providing email and password")
         }
     }
 
@@ -43,9 +44,9 @@ class SupabaseUserController(
         val email = credentials["email"]
         val password = credentials["password"]
         if (email != null && password != null) {
-            logger.debug("User with the email $email is trying to login")
-            supabaseUserService.login(email.trim(), password.trim(), response)
-            logger.debug("User: $email successfully logged in")
+            supabaseUserService.loginWithEmail(email.trim(), password.trim(), response)
+        }else{
+            throw MissingCredentialsException("User tried to login without providing email and password")
         }
     }
 
