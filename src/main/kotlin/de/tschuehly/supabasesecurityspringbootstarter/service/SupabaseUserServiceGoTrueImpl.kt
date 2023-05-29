@@ -19,13 +19,15 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.putJsonArray
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationContext
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 
 @Service
 class SupabaseUserServiceGoTrueImpl(
     val supabaseProperties: SupabaseProperties,
-    val goTrueClient: GoTrue
+    val goTrueClient: GoTrue,
+    val applicationContext: ApplicationContext
 ) : SupabaseUserService {
     val logger: Logger = LoggerFactory.getLogger(SupabaseUserServiceGoTrueImpl::class.java)
     override fun registerWithEmail(email: String, password: String, response: HttpServletResponse) {

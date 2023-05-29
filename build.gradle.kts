@@ -29,13 +29,19 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.springframework.boot:spring-boot-starter-web")
-	testImplementation("org.springframework.boot:spring-boot-devtools")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    testImplementation("org.springframework.boot:spring-boot-devtools")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 	implementation("com.auth0:java-jwt:4.1.0")
 	implementation("io.github.jan-tennert.supabase:gotrue-kt:1.0.0-rc-2")
-	runtimeOnly("io.ktor:ktor-client-cio:2.3.0")
+	runtimeOnly("io.ktor:ktor-client-apache:2.3.0")
+	testImplementation("io.ktor:ktor-client-mock:2.3.0")
+	testImplementation("com.russhwolf:multiplatform-settings-test:1.0.0")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1")
+
+
 
 
 	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")

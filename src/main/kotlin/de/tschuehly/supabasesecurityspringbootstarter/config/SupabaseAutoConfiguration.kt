@@ -3,7 +3,9 @@ package de.tschuehly.supabasesecurityspringbootstarter.config
 import de.tschuehly.supabasesecurityspringbootstarter.controller.SupabaseUserController
 import de.tschuehly.supabasesecurityspringbootstarter.exception.SupabaseExceptionHandler
 import de.tschuehly.supabasesecurityspringbootstarter.exception.SupabaseExceptionHandlerNotDefinedException
+import de.tschuehly.supabasesecurityspringbootstarter.security.SupabaseJwtFilter
 import de.tschuehly.supabasesecurityspringbootstarter.security.SupabaseSecurityConfig
+import de.tschuehly.supabasesecurityspringbootstarter.service.SupabaseUserService
 import de.tschuehly.supabasesecurityspringbootstarter.service.SupabaseUserServiceGoTrueImpl
 import io.github.jan.supabase.gotrue.GoTrue
 import io.github.jan.supabase.plugins.standaloneSupabaseModule
@@ -19,7 +21,6 @@ import org.springframework.context.annotation.*
 
 @Configuration
 @ConditionalOnProperty(prefix = "supabase", name = ["projectId"])
-@ComponentScan("de.tschuehly.supabasesecurityspringbootstarter")
 @EnableConfigurationProperties(SupabaseProperties::class)
 @Import(SupabaseSecurityConfig::class)
 @PropertySource("classpath:application-supabase.properties")
@@ -42,19 +43,25 @@ class SupabaseAutoConfiguration(
 
     @Bean
     @ConditionalOnMissingBean
-    fun supabaseService(goTrueClient: GoTrue): SupabaseUserServiceGoTrueImpl {
+    fun supabaseService(goTrueClient: GoTrue, applicationContext: ApplicationContext): SupabaseUserServiceGoTrueImpl {
         logger.debug("Registering the SupabaseUserService")
-        return SupabaseUserServiceGoTrueImpl(supabaseProperties, goTrueClient)
+        return SupabaseUserServiceGoTrueImpl(supabaseProperties, goTrueClient, applicationContext)
+    }
+
+    @Bean
+    fun supabaseJwtFilter(supabaseUserService: SupabaseUserService): SupabaseJwtFilter{
+        return SupabaseJwtFilter(supabaseUserService)
     }
 
     @Bean
     @ConditionalOnMissingBean
-    fun supabaseController(supabaseUserService: SupabaseUserServiceGoTrueImpl): SupabaseUserController {
+    fun supabaseController(supabaseUserService: SupabaseUserService): SupabaseUserController {
         logger.debug("Registering the SupabaseUserController")
         return SupabaseUserController(supabaseUserService)
     }
 
     @Bean
+    @ConditionalOnMissingBean
     fun supabaseClient(supabaseProperties: SupabaseProperties): GoTrue {
         return standaloneSupabaseModule(
             GoTrue,

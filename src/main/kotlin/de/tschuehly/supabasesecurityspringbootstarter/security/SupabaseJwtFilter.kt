@@ -1,7 +1,7 @@
 package de.tschuehly.supabasesecurityspringbootstarter.security
 
 import com.auth0.jwt.exceptions.TokenExpiredException
-import de.tschuehly.supabasesecurityspringbootstarter.service.SupabaseUserServiceGoTrueImpl
+import de.tschuehly.supabasesecurityspringbootstarter.service.SupabaseUserService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -13,7 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class SupabaseJwtFilter(
-    val supabaseUserService: SupabaseUserServiceGoTrueImpl
+    val supabaseUserService: SupabaseUserService
 ) : OncePerRequestFilter() {
     val logger: Logger = LoggerFactory.getLogger(SupabaseJwtFilter::class.java)
     override fun doFilterInternal(

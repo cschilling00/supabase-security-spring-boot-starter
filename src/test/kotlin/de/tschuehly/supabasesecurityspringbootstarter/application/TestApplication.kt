@@ -9,10 +9,14 @@ import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfigurat
 import org.springframework.boot.runApplication
 
 @SpringBootApplication(
-    exclude = [DataSourceAutoConfiguration::class, DataSourceTransactionManagerAutoConfiguration::class, HibernateJpaAutoConfiguration::class],
-
-    )
+    exclude = [
+        DataSourceAutoConfiguration::class,
+        DataSourceTransactionManagerAutoConfiguration::class,
+        HibernateJpaAutoConfiguration::class
+    ],
+)
 @ImportAutoConfiguration(SupabaseAutoConfiguration::class)
+
 class TestApplication {
 
 }
